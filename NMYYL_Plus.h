@@ -11,7 +11,9 @@
 #include <fstream>
 #include <sstream>
 #include<string>
+#include <cstdlib> // for system()
 #include <stdexcept> // 引入标准异常库
+#include <initializer_list>
 
 using namespace std;
 
@@ -648,6 +650,18 @@ public:
         file.close();
     }
 
+    // 使用 initializer_list 的构造函数
+    NY_Class_Datas(const std::initializer_list<double>& initList)
+        : dataSize(initList.size()), data(new double[initList.size()])
+    {
+       // std::cout << "Constructor with initializer list called." << std::endl;
+        int i = 0;
+        for (auto& value : initList)
+        {
+            data[i++] = value;
+        }
+    }
+
     NY_Class_Datas(int size, double* data)
     {
         this->dataSize = size;
@@ -725,6 +739,34 @@ public:
         delete[] data;
     }
 
+    // 获取最大值
+    double getMax() const {
+        if (dataSize == 0) {
+            throw std::invalid_argument("Array is empty. Cannot find maximum value.");
+        }
+        double maxVal = data[0];
+        for (int i = 1; i < dataSize; ++i) {
+            if (data[i] > maxVal) {
+                maxVal = data[i];
+            }
+        }
+        return maxVal;
+    }
+
+    // 获取最小值
+    double getMin() const {
+        if (dataSize == 0) {
+            throw std::invalid_argument("Array is empty. Cannot find minimum value.");
+        }
+        double minVal = data[0];
+        for (int i = 1; i < dataSize; ++i) {
+            if (data[i] < minVal) {
+                minVal = data[i];
+            }
+        }
+        return minVal;
+    }
+
     void print()
     {
         for (int i = 0; i < dataSize; i++)
@@ -771,9 +813,133 @@ public:
         }
     }
 
+    // 计算n阶矩
+    double moment(int n) const {
+        if (dataSize == 0 || n < 0) return 0.0; // 边界条件处理
+
+        double sum = 0.0;
+        for (int i = 0; i < dataSize; ++i) {
+            sum += std::pow(data[i], n);
+        }
+        return sum / dataSize; // 返回的是第n阶矩，即E[X^n]
+    }
+
+    // 计算n阶中心距
+    double centralMoment(int n) const {
+        if (dataSize == 0 || n < 0) return 0.0; // 边界条件处理
+
+        // 首先计算平均值
+        double mean = 0.0;
+        for (int i = 0; i < dataSize; ++i) {
+            mean += data[i];
+        }
+        mean /= dataSize;
+
+        // 然后根据平均值计算n阶中心距
+        double sum = 0.0;
+        for (int i = 0; i < dataSize; ++i) {
+            sum += std::pow(data[i] - mean, n);
+        }
+        return sum / dataSize; // 返回的是第n阶中心距，即E[(X-mean)^n]
+    }
 
 
 };
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//void NY_Maxi_QR(NY_Class_Maxi& A, NY_Class_Maxi& Q, NY_Class_Maxi& R)
+//{
+//    if (A.getCol() != A.getRow())
+//        throw std::invalid_argument("The number of rows must equal the number of columns in the matrix.");
+//
+//    Q = A;
+//
+//    double na_1 = 0;
+//    for (int i = 0; i < A.getCol(); i++)
+//    {
+//        na_1 += A.getElement(i, 0) * A.getElement(i, 0);
+//    }
+//
+//    for (int i = 0; i < A.getCol(); i++)
+//    {
+//        Q.setElement(i, 0, A.getElement(i, 0) / sqrt(na_1));
+//    }
+//
+//    for (int i = 1; i < A.getCol(); i++)
+//    {
+//        for (int j = 0; j < i; j++)
+//        {
+//            //Q.printMatrix();
+//            //cout << "i=" << i << " j=" << j << endl;
+//            double sum1 = 0, sum2 = 0;
+//            for (int k = 0; k < A.getRow(); k++)
+//            {
+//                sum1 += A.getElement(k, i) * Q.getElement(k, j);
+//                sum2 += Q.getElement(k, j) * Q.getElement(k, j);
+//            }
+//
+//            for (int k = 0; k < A.getCol(); k++)
+//            {
+//                Q.setElement(k, i, Q.getElement(k, i) - sum1 * Q.getElement(k, j) / sum2);
+//            }
+//        }
+//
+//        double na = 0;
+//        for (int j = 0; j < A.getCol(); j++)
+//        {
+//            na += Q.getElement(j, i) * Q.getElement(j, i);
+//        }
+//        for (int j = 0; j < A.getCol(); j++)
+//        {
+//            Q.setElement(j, i, Q.getElement(j, i) / sqrt(na));
+//        }
+//
+//    }
+//
+//
+//    R = Q.transpose() * A;
+//
+//}
+//
+//void NY_Maxi_QREigen(NY_Class_Maxi& A, int max_h, double e = 0.000001)
+//{
+//    if (A.getCol() != A.getRow())
+//        throw std::invalid_argument("The number of rows must equal the number of columns in the matrix.");
+//
+//    NY_Class_Maxi Q(A.getCol(), A.getRow()), R(A.getCol(), A.getRow());
+//    for (int i = 0; i < max_h; i++)
+//    {
+//        //cout << "i=" << i << endl;
+//
+//        NY_Class_Maxi A1(A.getCol(), A.getRow(), Q.getElement(A.getCol() - 1, A.getRow() - 1));
+//
+//        A = A - A1;
+//
+//        NY_Maxi_QR(A, Q, R);
+//        A = R * Q;
+//
+//        NY_Class_Maxi A2(A.getCol(), A.getRow(), Q.getElement(A.getCol() - 1, A.getRow() - 1));
+//
+//        A = A + A2;
+//
+//        int flag = 0;
+//        for (int j = 1; j < A.getCol(); j++)
+//        {
+//            for (int k = 0; k < j; k++)
+//                if (abs(A.getElement(j, k)) > e)
+//                    flag = 1;
+//        }
+//
+//        if (flag == 0)
+//        {
+//            break;
+//        }
+//
+//
+//    }
+//
+//}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -832,6 +998,80 @@ double NY_Util_machineEpsilon() {
 }
 
 const double NY_mechineE= NY_Util_machineEpsilon();
+
+// 将数据写入文件
+void writeDataToFile(const std::string& filename, const double* xData, const double* yData, int dataSize) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: Unable to open file for writing.\n";
+        return;
+    }
+    for (int i = 0; i < dataSize; ++i) {
+        file << xData[i] << " " << (yData ? yData[i] : 0.0) << "\n"; // 如果没有 y 数据，默认为 0
+    }
+    file.close();
+}
+
+// 单个 NCD 对象的绘图函数（支持颜色参数）
+void NY_Util_plotData(const NY_Class_Datas& x, const NY_Class_Datas& y, int connect = 0, const std::string& color = "") {
+    const double* xData = x.getData();
+    const double* yData = y.getData();
+    int dataSize = x.getDataSize();
+
+    // 写入数据到文件
+    std::string dataFile = "data.txt";
+    writeDataToFile(dataFile, xData, yData, dataSize);
+
+    // 调用 Python 脚本，传递颜色参数
+    std::string command = "python C:/code/plot.py " + dataFile + " " + std::to_string(connect);
+    if (!color.empty()) {
+        command += " --color " + color; // 添加颜色参数
+    }
+    system(command.c_str());
+}
+
+// 改进后的 NCD 数组的绘图函数（支持颜色数组参数）
+void NY_Util_plotData(const NY_Class_Datas& x, const NY_Class_Datas* yArray, int arraySize, int connect = 0, const std::vector<std::string>& colors = {}) {
+    // 获取 x 数据
+    const double* xData = x.getData();
+    int xDataSize = x.getDataSize();
+
+    // 确保 yArray 中的所有数据长度与 x 数据一致
+    for (int i = 0; i < arraySize; ++i) {
+        if (yArray[i].getDataSize() != xDataSize) {
+            std::cerr << "Error: Mismatched data sizes between x and y arrays.\n";
+            return;
+        }
+    }
+
+    // 写入所有数据到文件
+    std::string dataFile = "data.txt";
+    std::ofstream file(dataFile);
+    if (!file.is_open()) {
+        std::cerr << "Error: Unable to open file for writing.\n";
+        return;
+    }
+
+    // 将 x 数据和每个 y 数据写入文件
+    for (int j = 0; j < xDataSize; ++j) {
+        file << xData[j]; // 写入 x 数据
+        for (int i = 0; i < arraySize; ++i) {
+            const double* yData = yArray[i].getData();
+            file << " " << yData[j]; // 写入对应的 y 数据
+        }
+        file << "\n"; // 换行
+    }
+    file.close();
+
+    // 构造命令，添加颜色参数
+    std::string command = "python C:/code/plot.py " + dataFile + " " + std::to_string(connect);
+    for (const auto& color : colors) {
+        command += " --color " + color; // 添加颜色参数
+    }
+    system(command.c_str());
+}
+
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -910,8 +1150,9 @@ double NY_diff_HOND(double (*func)(double), double x, double h /*= NY_mechineE*/
  
 
 
-// 数值解法函数：四阶龙格-库塔法
-std::vector<double> NY_diff_ODEs(double* (*func)(double, double*),int numVars,double x0,std::vector<double>& y0,double h,int steps) {
+// 四阶龙格-库塔法求解ODE
+std::vector<double> NY_diff_ODEs(double* (*func)(double, double*), int numVars,
+    double x0, std::vector<double>& y0, double h, int steps) {
     std::vector<double> y = y0; // 当前状态
     double x = x0;              // 当前时间
 
@@ -922,7 +1163,7 @@ std::vector<double> NY_diff_ODEs(double* (*func)(double, double*),int numVars,do
     for (int step = 0; step < steps; ++step) {
         // 计算 k1
         double* k1_ptr = func(x, y.data());
-        for (int i = 0; i < numVars; ++i) k1[i] = k1_ptr[i];
+        for (int i = 0; i < numVars; ++i) k1[i] = k1_ptr[i];  // 立即拷贝出来
 
         // 计算 k2
         for (int i = 0; i < numVars; ++i) temp[i] = y[i] + 0.5 * h * k1[i];
@@ -1349,5 +1590,70 @@ double NY_Stat_StdDev(const NY_Class_Datas& data)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+NY_Class_Datas NY_modle_EWeight(NY_Class_Maxi A)
+{
+    NY_Class_Maxi A1 = A;
+    for (int i = 0; i < A1.getCol(); i++)
+    {
+        double sum = 0;
+        for (int j = 0; j < A1.getRow(); j++)
+        {
+            sum += pow(A1.getElement(j, i), 2);
+        }
+
+        for (int j = 0; j < A1.getRow(); j++)
+        {
+            A1.setElement(j, i, A1.getElement(j, i) / sqrt(sum));
+        }
+    }
+
+    NY_Class_Maxi A2 = A1;
+    for (int i = 0; i < A2.getCol(); i++)
+    {
+        double sum = 0;
+        for (int j = 0; j < A2.getRow(); j++)
+        {
+            sum += A2.getElement(j, i);
+        }
+
+        for (int j = 0; j < A2.getRow(); j++)
+        {
+            A2.setElement(j, i, A2.getElement(j, i) / sum);
+        }
+    }
+
+    NY_Class_Datas A3(A2.getCol());
+    for (int i = 0; i < A3.getDataSize(); i++)
+    {
+        double sum = 0;
+        for (int j = 0; j < A2.getRow(); j++)
+        {
+            double a = A2.getElement(j, i);
+            sum += a * log(a);
+        }
+        A3.setValue(i, -sum / log(A2.getRow()));
+    }
+
+    double Sum = 0;
+    for (int i = 0; i < A3.getDataSize(); i++)
+    {
+        Sum += 1 - A3.getValue(i);
+    }
+
+    NY_Class_Datas A4(A3.getDataSize());
+    for (int i = 0; i < A4.getDataSize(); i++)
+    {
+        A4.setValue(i, (1 - A3.getValue(i)) / Sum);
+    }
+
+    return A4;
+
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 #endif // ROOT_FINDING_H
